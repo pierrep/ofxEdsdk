@@ -19,6 +19,8 @@
 #endif
 
 namespace ofxEdsdk {
+    /* Init static class member to init SDK */
+    CameraManager Camera::manager;
     
     EdsError EDSCALLBACK Camera::handleObjectEvent(EdsObjectEvent event, EdsBaseRef object, EdsVoid* context) {
         ofLogVerbose() << "object event " << Eds::getObjectEventString(event);
