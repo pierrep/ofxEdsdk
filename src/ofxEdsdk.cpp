@@ -53,7 +53,7 @@ namespace ofxEdsdk {
         }
         return EDS_ERR_OK;
     }
-    
+
     Camera::Camera() :
     deviceId(0),
     orientationMode(0),
@@ -97,6 +97,9 @@ namespace ofxEdsdk {
     void Camera::setup() {
         initialize();
         startCapture();
+    }
+    
+    void Camera::start() {
         startThread();
     }
     
@@ -311,7 +314,6 @@ namespace ofxEdsdk {
     
     void Camera::initialize() {
         try {
-            Eds::InitializeSDK();
             
             EdsCameraListRef cameraList;
             Eds::GetCameraList(&cameraList);
@@ -329,7 +331,7 @@ namespace ofxEdsdk {
                 EdsDeviceInfo info;
                 Eds::GetDeviceInfo(camera, &info);
                 Eds::SafeRelease(cameraList);
-                ofLogVerbose("ofxEdsdk::setup") << "connected camera model: " <<  info.szDeviceDescription << " " << info.szPortName << endl;
+                ofLogNotice("ofxEdsdk::setup") << "connected camera model: " <<  info.szDeviceDescription << " " << info.szPortName << endl;
             } else {
                 ofLogError() << "No cameras are connected for ofxEds::Camera::setup().";
             }
@@ -360,7 +362,6 @@ namespace ofxEdsdk {
                     liveViewReady = false;
                 }
                 Eds::CloseSession(camera);
-                Eds::TerminateSDK();
                 connected = false;
             } catch (Eds::Exception& e) {
                 ofLogError() << "There was an error closing ofxEds::Camera: " << e.what();
