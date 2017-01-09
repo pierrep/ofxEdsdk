@@ -10,7 +10,9 @@
 #include "FixedQueue.h"
 
 namespace ofxEdsdk {
+    
     class CameraManager {
+        
         
     public:
         CameraManager() {
@@ -19,12 +21,15 @@ namespace ofxEdsdk {
         ~CameraManager() {
             EdsTerminateSDK();
         }
+        void listDevices();
+    private:
+            EdsCameraRef camera;
     };
     
 	class Camera : public ofThread {
 	public:
 		Camera();
-        void setDeviceId(int deviceId);
+        void setDeviceID(int deviceId);
         void setOrientationMode(int orientationMode);
         void setLiveView(bool useLiveView);
 		void setup();
@@ -57,6 +62,8 @@ namespace ofxEdsdk {
         bool isMovieNew();
 
         bool isConnected() { return connected; }
+        
+        static CameraManager manager;
         
     protected:
         void initialize();
@@ -135,6 +142,5 @@ namespace ofxEdsdk {
         int deviceId;
         int orientationMode;
         
-        static CameraManager manager;
 	};
 }

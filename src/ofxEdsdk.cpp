@@ -22,6 +22,27 @@ namespace ofxEdsdk {
     /* Init static class member to init SDK */
     CameraManager Camera::manager;
     
+    void CameraManager::listDevices() {
+        EdsCameraListRef cameraList;
+        Eds::GetCameraList(&cameraList);
+        
+        EdsUInt32 cameraCount;
+        Eds::GetChildCount(cameraList, &cameraCount);
+        if(cameraCount > 0) {
+            for(unsigned int i = 0; i < cameraCount;i++)
+            {
+                EdsInt32 cameraIndex = i;
+                Eds::GetChildAtIndex(cameraList, cameraIndex, &camera);
+                EdsDeviceInfo info;
+                Eds::GetDeviceInfo(camera, &info);
+                ofLogNotice("ofxEdsdk::listDevices") << "camera found: " <<  info.szDeviceDescription << " device id: " << info.szPortName;
+            }
+            Eds::SafeRelease(cameraList);
+        } else {
+            ofLogNotice("ofxEdsdk::listDevices") << "No cameras found.";
+        }
+    }
+    
     EdsError EDSCALLBACK Camera::handleObjectEvent(EdsObjectEvent event, EdsBaseRef object, EdsVoid* context) {
         ofLogVerbose() << "object event " << Eds::getObjectEventString(event);
         if(object) {
@@ -84,7 +105,7 @@ namespace ofxEdsdk {
         liveBufferBack = new ofBuffer();
     }
     
-    void Camera::setDeviceId(int deviceId) {
+    void Camera::setDeviceID(int deviceId) {
         this->deviceId = deviceId;
     }
     
@@ -333,7 +354,7 @@ namespace ofxEdsdk {
                 EdsDeviceInfo info;
                 Eds::GetDeviceInfo(camera, &info);
                 Eds::SafeRelease(cameraList);
-                ofLogNotice("ofxEdsdk::setup") << "connected camera model: " <<  info.szDeviceDescription << " " << info.szPortName << endl;
+                ofLogNotice("ofxEdsdk::setup") << "connected camera model: " <<  info.szDeviceDescription << " " << info.szPortName;
             } else {
                 ofLogError() << "No cameras are connected for ofxEds::Camera::setup().";
             }
