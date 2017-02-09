@@ -1,7 +1,7 @@
 #include "ofxEdsdk.h"
 
 /*
- This controls the size of liveBufferMiddle. If you are running at a low fps
+ This controls the size of livePixelsMiddle. If you are running at a low fps
  (lower than camera fps), then it will effectively correspond to the latency of the
  camera. If you're running higher than camera fps, it will determine how many frames
  you can miss without dropping one. For example, if you are running at 60 fps
@@ -97,11 +97,12 @@ namespace ofxEdsdk {
     needToSendKeepAlive(false),
     needToDownloadImage(false),
     resetIntervalMinutes(15) {
-        liveBufferMiddle.resize(OFX_EDSDK_BUFFER_SIZE);
-        for(int i = 0; i < liveBufferMiddle.maxSize(); i++) {
-            liveBufferMiddle[i] = new ofBuffer();
+        livePixelsMiddle.resize(OFX_EDSDK_BUFFER_SIZE);
+        for(int i = 0; i < livePixelsMiddle.maxSize(); i++) {
+            livePixelsMiddle[i] = new ofPixels();
         }
-        liveBufferFront = new ofBuffer();
+        livePixelsFront = new ofPixels();
+        livePixelsBack = new ofPixels();
         liveBufferBack = new ofBuffer();
     }
     
@@ -138,22 +139,24 @@ namespace ofxEdsdk {
         if(connected) {
             ofLogError() << "You must call close() before destroying the camera.";
         }
-        for(int i = 0; i < liveBufferMiddle.maxSize(); i++) {
-            delete liveBufferMiddle[i];
+        for(int i = 0; i < livePixelsMiddle.maxSize(); i++) {
+            delete livePixelsMiddle[i];
         }
-        delete liveBufferFront;
-        delete liveBufferBack;
+        delete livePixelsFront;
+        delete livePixelsBack;
     }
     
     void Camera::update() {
         if(connected){
             lock();
-            if(liveBufferMiddle.size() > 0) {
+            if(livePixelsMiddle.size() > 0) {
                 // decoding the jpeg in the main thread allows the capture thread to run in a tighter loop.
-                swap(liveBufferFront, liveBufferMiddle.front());
-                liveBufferMiddle.pop();
+                swap(livePixelsFront, livePixelsMiddle.front());
+                livePixelsMiddle.pop();
                 unlock();
-                ofLoadImage(livePixels, *liveBufferFront);
+                
+                livePixels = *livePixelsFront;
+
                 livePixels.rotate90(orientationMode);
                 if(liveTexture.getWidth() != livePixels.getWidth() ||
                    liveTexture.getHeight() != livePixels.getHeight()) {
@@ -395,11 +398,13 @@ namespace ofxEdsdk {
     void Camera::captureLoop() {
         if(liveViewReady) {
             if(Eds::DownloadEvfData(camera, *liveBufferBack)) {
+                ofLoadImage(*livePixelsBack, *liveBufferBack);
                 lock();
                 fps.tick();
-                bytesPerFrame = ofLerp(bytesPerFrame, liveBufferBack->size(), .01);
-                swap(liveBufferBack, liveBufferMiddle.back());
-                liveBufferMiddle.push();
+                bytesPerFrame = ofLerp(bytesPerFrame, livePixelsBack->size(), .01);
+                
+                swap(livePixelsBack, livePixelsMiddle.back());
+                livePixelsMiddle.push();
                 unlock();
             }
         }

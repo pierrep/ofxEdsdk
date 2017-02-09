@@ -84,8 +84,10 @@ namespace ofxEdsdk {
 		 At this point, the pixels are decoded into livePixels and uploaded to liveTexture.
 		 */
         ofBuffer* liveBufferBack;
-        FixedQueue<ofBuffer*> liveBufferMiddle;
-        ofBuffer* liveBufferFront;
+        ofPixels* livePixelsBack;
+        FixedQueue<ofPixels*> livePixelsMiddle;
+
+        ofPixels* livePixelsFront;
 		mutable ofPixels livePixels;
 		mutable ofTexture liveTexture;
 		
