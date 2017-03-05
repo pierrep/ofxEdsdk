@@ -64,6 +64,7 @@ namespace ofxEdsdk {
     EdsError EDSCALLBACK Camera::handlePropertyEvent(EdsPropertyEvent event, EdsPropertyID propertyId, EdsUInt32 param, EdsVoid* context) {
         ofLogVerbose() << "property event " << Eds::getPropertyEventString(event) << ": " << Eds::getPropertyIDString(propertyId) << " / " << param;
         if(propertyId == kEdsPropID_Evf_OutputDevice) {
+            ofLogNotice() << "setLiveViewReady(true)";
             ((Camera*) context)->setLiveViewReady(true);
         }
         return EDS_ERR_OK;
@@ -187,6 +188,18 @@ namespace ofxEdsdk {
             photoNew = false;
             return true;
         } else {
+            return false;
+        }
+    }
+    
+    bool Camera::isPhotoNewAndDecoded() {
+        lock();
+        if(photoNew && !needToDecodePhoto) {
+            photoNew = false;
+            unlock();
+            return true;
+        } else {
+            unlock();
             return false;
         }
     }
@@ -396,7 +409,7 @@ namespace ofxEdsdk {
     }
     
     void Camera::captureLoop() {
-        if(liveViewReady) {
+        if(liveViewReady && useLiveView) {
             if(Eds::DownloadEvfData(camera, *liveBufferBack)) {
                 ofLoadImage(*livePixelsBack, *liveBufferBack);
                 lock();
@@ -482,6 +495,14 @@ namespace ofxEdsdk {
             }
         }
         
+        if(needToDecodePhoto) {
+            ofLoadImage(photoPixels, photoBuffer);
+            photoPixels.rotate90(orientationMode);
+            lock();
+            needToDecodePhoto = false;
+            unlock();
+        }
+        
         float timeSinceLastReset = ofGetElapsedTimef() - lastResetTime;
         if(timeSinceLastReset > resetIntervalMinutes * 60) {
             resetLiveView();
@@ -495,7 +516,7 @@ namespace ofxEdsdk {
 #endif
         while(isThreadRunning()) {
             captureLoop();
-            ofSleepMillis(5);
+            ofSleepMillis(16);
         }
 #if defined(TARGET_WIN32)
         CoUninitialize();

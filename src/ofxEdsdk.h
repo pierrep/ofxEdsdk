@@ -51,6 +51,7 @@ namespace ofxEdsdk {
         
 		void takePhoto(bool blocking = false);
 		bool isPhotoNew();
+        bool isPhotoNewAndDecoded();
 		void drawPhoto(float x, float y);
 		void drawPhoto(float x, float y, float width, float height);
         bool savePhoto(string filename); // .jpg only
