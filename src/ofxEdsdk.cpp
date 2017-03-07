@@ -46,9 +46,31 @@ namespace ofxEdsdk {
     EdsError EDSCALLBACK Camera::handleObjectEvent(EdsObjectEvent event, EdsBaseRef object, EdsVoid* context) {
         ofLogVerbose() << "object event " << Eds::getObjectEventString(event);
         if(object) {
+            
+            // This event used to be received when `takePhoto` was called.
+            // This is because in the past, images were saved to the camera
+            // and then downloaded. Now however, `takePhoto` should save the
+            // image directly to the host.
             if(event == kEdsObjectEvent_DirItemCreated) {
                 ((Camera*) context)->setDownloadImage(object);
-            } else if(event == kEdsObjectEvent_DirItemRemoved) {
+            
+            // Received when the camera has taken a photo and wants to
+            // transfer the data directly to the host. This is the event
+            // that currently gets called after calling the `takePhoto`
+            // method.
+            } else if(event == kEdsObjectEvent_DirItemRequestTransfer){
+                Camera* camera = (Camera*) context;
+                EdsDirectoryItemRef PictureFromCamBuf = object;
+                try {
+                    Eds::DownloadImage(PictureFromCamBuf, camera->photoBuffer);
+                }
+                catch (Eds::Exception& e) {
+                    ofLogError() << "Error while downloading image from camera buffer: " << e.what();
+                }
+                camera->photoNew = true;
+                camera->needToDecodePhoto = true;
+            }
+            else if(event == kEdsObjectEvent_DirItemRemoved) {
                 // no need to release a removed item
             } else {
                 try {
@@ -117,6 +139,23 @@ namespace ofxEdsdk {
     
     void Camera::setLiveView(bool useLiveView) {
         this->useLiveView = useLiveView;
+        // If not using live view, we assume we're taking photos.
+        // This sets up the camera to save directly to the host.
+        if (!useLiveView) {
+            EdsUInt32 saveTo = kEdsSaveTo_Host;
+            EdsError err = EdsSetPropertyData(camera, kEdsPropID_SaveTo, 0, sizeof(saveTo) , &saveTo);
+            if (err != EDS_ERR_OK) {
+                ofLogError() << "Failed to set property data: " << err;
+            }
+            EdsCapacity capacity;// = {0x7FFFFFFF, 0x1000, 1};
+            capacity.reset = 1;
+            capacity.bytesPerSector = 512*8;
+            capacity.numberOfFreeClusters = 36864*9999;
+            err = EdsSetCapacity(camera, capacity);
+            if (err != EDS_ERR_OK) {
+                ofLogError() << "Failed to set capacity: " << err;
+            }
+        }
     }
     
     void Camera::setup() {
@@ -498,6 +537,7 @@ namespace ofxEdsdk {
         }
         
         if(needToDecodePhoto) {
+            ofLogVerbose() << "Decoding photo";
             ofLoadImage(photoPixels, photoBuffer);
             photoPixels.rotate90(orientationMode);
             lock();
